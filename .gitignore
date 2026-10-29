@@ -1,0 +1,36 @@
+# Environments and secrets
+.venv/
+.env
+kaggle.json
+
+# Data never goes to GitHub (size + licence + privacy)
+data/
+*.duckdb
+*.duckdb.wal
+
+# Generated outputs (re-created by the pipeline)
+reports/*.json
+reports/*.csv
+reports/sample/
+!reports/.gitkeep
+
+# API score log never goes to Git
+logs/
+
+# Fitted models and experiment-tracking store (re-created by training)
+models/
+mlflow.db
+mlruns/
+mlartifacts/
+
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Editors / OS
+.vscode/
+.idea/
+.ipynb_checkpoints/
+Thumbs.db
+.DS_Store

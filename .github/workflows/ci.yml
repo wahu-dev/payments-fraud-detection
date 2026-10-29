@@ -1,0 +1,31 @@
+# Runs on every push and pull request:
+#   1. unit tests (SQL features, leakage guards, validation, metrics, rules)
+#   2. the stage 1 pipeline end to end on synthetic sample data
+# The real Kaggle data is never needed here.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Unit tests
+        run: pytest
+
+      - name: Stage 1 smoke test (load, SQL features, validation, leakage audit, rules)
+        run: python -m src.pipeline --sample

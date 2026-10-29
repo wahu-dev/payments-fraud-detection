@@ -1,0 +1,65 @@
+# All paths and parameters for the payments fraud project.
+project:
+  name: payments-fraud-detection
+  random_seed: 42
+
+data:
+  kaggle_dataset: ealaxi/paysim1
+  raw_dir: data/raw
+  raw_file: PS_20174392719_1491204439457_log.csv
+  warehouse: data/warehouse.duckdb
+  # Synthetic sample for tests and CI (generated, a few seconds to build)
+  sample_dir: data/sample
+  sample_rows: 40000
+
+features:
+  sql_dir: sql/features
+  model_table: model_table
+  # Fraud only occurs in these two types; the others are out of scope
+  # (they are scored as "allow" by default and monitored separately).
+  in_scope_types: [TRANSFER, CASH_OUT]
+  # Columns the models may use. Everything here is known at the moment the
+  # transaction is requested. tests/test_leakage.py enforces this list.
+  model_features:
+    - is_transfer
+    - hour_of_day
+    - amount
+    - log_amount
+    - orig_balance_before
+    - dest_balance_before
+    - orig_zero_balance
+    - dest_zero_balance
+    - amount_to_orig_balance
+    - drains_account
+    - dest_is_merchant
+    - dest_prior_txns
+    - dest_txns_prev_24h
+    - dest_amount_prev_24h
+    - dest_hours_since_first_seen
+    - dest_is_new
+    - orig_prior_txns
+  # Never allowed as model inputs, with the reason (printed by the leakage audit)
+  forbidden:
+    orig_balance_after: known only after the transaction has been executed
+    dest_balance_after: known only after the transaction has been executed
+    orig_balance_error: built from post-transaction balances (a simulator artefact)
+    dest_balance_error: built from post-transaction balances (a simulator artefact)
+    legacy_flag: output of the existing rule system, kept only as a baseline
+    is_fraud: the label
+
+# Time-based split on the simulation clock: 1 step = 1 hour, 743 steps = about 31 days.
+# Train on the past, tune on the next period, test on the most recent one.
+split:
+  train_end_step: 432   # days 1-18
+  valid_end_step: 552   # days 19-23; test = days 24-31
+
+# Rule-based baseline: what a payments team typically runs before any model.
+rules:
+  large_amount: 200000          # R1: very large transfer or cash-out
+  drain_min_amount: 10000       # R2: empties the sender's account (and is not tiny)
+  new_dest_min_amount: 100000   # R3: large transfer to a recipient never seen before
+
+alerting:
+  daily_alert_budget: 200       # alerts the investigation team can review per day
+
+reports_dir: reports
