@@ -55,7 +55,8 @@ def run_checks(con, cfg: dict) -> list[Check]:
         Check("model features are not forbidden", not (set(features) & forbidden),
               f"forbidden in feature list: {sorted(set(features) & forbidden)}"),
         Check("train, valid and test each have fraud and non-fraud",
-              set(split_ok) == {"train", "valid", "test"} and all(split_ok.values()), f"{split_ok}"),
+              {"train", "valid", "test"} <= set(split_ok)
+              and all(split_ok[s] for s in ("train", "valid", "test")), f"{split_ok}"),
     ]
 
 

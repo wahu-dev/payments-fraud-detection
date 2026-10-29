@@ -4,7 +4,7 @@ import pandas as pd
 
 def test_only_transfers_and_cash_outs_are_in_scope(model_rows):
     assert 5 not in model_rows.index            # the merchant payment
-    assert len(model_rows) == 8
+    assert len(model_rows) == 10
 
 
 def test_simulation_clock(model_rows):
@@ -62,3 +62,5 @@ def test_time_split_boundaries(model_rows):
     assert model_rows.loc[3, "split"] == "train"
     assert model_rows.loc[4, "split"] == "valid"          # step 26 = last valid hour
     assert model_rows.loc[6, "split"] == "test"
+    assert model_rows.loc[11, "split"] == "test"          # step 33
+    assert model_rows.loc[9, "split"] == "shifted"        # after the test period

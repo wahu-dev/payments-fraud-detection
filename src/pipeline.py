@@ -65,7 +65,8 @@ def run(sample: bool = False) -> dict:
     con = connect(warehouse)
     try:
         load_transactions(con, csv_path)
-        write_split_config(con, cfg["split"]["train_end_step"], cfg["split"]["valid_end_step"])
+        split = cfg["split"]
+        write_split_config(con, split["train_end_step"], split["valid_end_step"], split["test_end_step"])
         build_features(con, project_path(cfg["features"]["sql_dir"]))
         validate(con, cfg)
         profile = data_profile(con, table)
@@ -73,15 +74,17 @@ def run(sample: bool = False) -> dict:
         audit = run_audit(con, cfg)
         audit.to_csv(reports / "leakage_audit.csv", index=False)
 
-        frame = query_df(con, f"SELECT {', '.join(RULE_COLUMNS)} FROM {table} WHERE split IN ('valid', 'test')")
+        frame = query_df(con, f"SELECT {', '.join(RULE_COLUMNS)} FROM {table} WHERE split <> 'train'")
     finally:
         con.close()
 
     budget = cfg["alerting"]["daily_alert_budget"]
     rule_tables = []
     rule_ranking = {}
-    for split in ["valid", "test"]:
+    for split in ["valid", "test", "shifted"]:
         part = frame[frame["split"] == split]
+        if part.empty or part["is_fraud"].nunique() < 2:
+            continue
         result = evaluate_rules(part, cfg["rules"], budget)
         rule_ranking[split] = result.attrs["ranking"]
         rule_tables.append(result.assign(split=split))
@@ -91,12 +94,12 @@ def run(sample: bool = False) -> dict:
     summary = {"data": profile, "leakage_audit": audit.to_dict("records"),
                "rules_baseline": rules.to_dict("records"), "rules_ranking": rule_ranking}
     (reports / "stage1_summary.json").write_text(json.dumps(summary, indent=2, default=str), encoding="utf-8")
-    _print_summary(profile, audit, rules[rules["split"] == "test"], rule_ranking["test"], budget)
+    _print_summary(profile, audit, rules, rule_ranking, budget)
     log.info("Reports written to %s", reports)
     return summary
 
 
-def _print_summary(profile: dict, audit: pd.DataFrame, rules: pd.DataFrame, ranking: dict, budget: int) -> None:
+def _print_summary(profile: dict, audit: pd.DataFrame, rules: pd.DataFrame, rankings: dict, budget: int) -> None:
     pd.set_option("display.width", 160)
     pd.set_option("display.max_columns", 20)
     print("\n=== Data ===")
@@ -107,11 +110,15 @@ def _print_summary(profile: dict, audit: pd.DataFrame, rules: pd.DataFrame, rank
     print(pd.DataFrame(profile["splits"]).to_string(index=False))
     print("\n=== Leakage audit (train period, one column at a time) ===")
     print(audit[["column", "status", "roc_auc", "pr_auc"]].to_string(index=False))
-    print("\n=== Rules baseline on the TEST period ===")
     cols = ["rule", "alerts_per_day", "frauds_caught", "frauds", "precision", "recall", "value_recall"]
-    print(rules[cols].to_string(index=False))
-    print(f"\nRule score as a ranking: ROC-AUC {ranking['roc_auc']}, PR-AUC {ranking['pr_auc']} "
-          f"(the number stage 2 models must beat). Daily alert budget: {budget}.")
+    titles = {"test": "TEST period (headline)", "shifted": "SHIFTED period (stress test: traffic collapses)"}
+    for split, title in titles.items():
+        if split not in rankings:
+            continue
+        print(f"\n=== Rules baseline on the {title} ===")
+        print(rules.loc[rules["split"] == split, cols].to_string(index=False))
+        r = rankings[split]
+        print(f"Rule score as a ranking: ROC-AUC {r['roc_auc']}, PR-AUC {r['pr_auc']}. Daily alert budget: {budget}.")
 
 
 def main() -> None:

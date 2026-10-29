@@ -38,7 +38,9 @@ PaySim CSV ──► DuckDB ──► SQL features ──► validation ──�
 - **Behaviour features in SQL**, using only earlier hours: how many transfers the recipient received
   before and in the last 24 hours, how much money, how long the recipient has been active, whether it
   is new, whether the transfer empties the sender's account.
-- **Time-based split:** train on days 1-18, tune on days 19-23, test on days 24-31.
+- **Time-based split:** train on days 1-13, tune on days 14-15, test on days 16-17. Days 18-31 are
+  kept as a separate stress test, because normal traffic in the simulator almost stops after day 17
+  while fraud continues (see the decision log).
 - **Rules baseline:** three readable rules plus the legacy flag in the data, measured as alerts per
   day, recall and **fraud value caught**, also under a 200-alerts-per-day budget.
 

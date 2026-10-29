@@ -33,7 +33,7 @@ def test_future_transactions_do_not_change_past_features(tmp_path, cfg, con):
 
 
 def test_same_hour_transactions_do_not_change_features(tmp_path, cfg, con):
-    same_hour = (26, "TRANSFER", 777.0, "A9", 777.0, 0.0, "D1", 0.0, 0.0, 0, 0)
+    same_hour = (26, "TRANSFER", 777.0, "Z1", 777.0, 0.0, "D1", 0.0, 0.0, 0, 0)
     extra = build_warehouse(tmp_path, cfg, rows_frame(ROWS + [same_hour]), name="samehour")
     before = _features(con, cfg)
     after = _features(extra, cfg).loc[before.index]

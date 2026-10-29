@@ -28,4 +28,4 @@ def test_split_without_fraud_fails(con, cfg):
 def test_split_config_rejects_bad_boundaries(con):
     from src.load import write_split_config
     with pytest.raises(ValueError):
-        write_split_config(con, 50, 40)
+        write_split_config(con, 50, 40, 60)

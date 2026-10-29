@@ -26,14 +26,35 @@ another transaction in the same hour, changes no existing feature.
 features carry little signal. Recipients repeat, and money mules show up as recipients that receive
 from many senders in a short time. Sender history is kept (`orig_prior_txns`) so the audit shows this.
 
-**Time-based split, not random.** Train on days 1-18, tune on days 19-23, test on days 24-31. A
-random split would let the model learn from the same days (and the same mule accounts) it is tested
-on, which overstates performance. Rejected: random stratified split.
+**Time-based split inside the realistic period, plus a separate stress test.** A per-day profile
+showed that fraud stays steady at about 260 a day for the whole month, while normal traffic is
+realistic (150,000-200,000 transactions a day) only on days 1-2 and 6-17. On days 3-5 and 18-31 it
+almost stops, and day 31 is 272 transactions that are all fraud. These are simulator artefacts. A
+first split that tested on days 24-31 had a 2.6% fraud rate, 14 times the normal 0.19%, which would
+have flattered every precision number. So:
+
+| Period | Days | Use |
+| --- | --- | --- |
+| Train | 1-13 | fit the models |
+| Valid | 14-15 | tune them |
+| Test | 16-17 | headline results, at a realistic fraud rate |
+| Shifted | 18-31 | separate stress test: how the model behaves when traffic suddenly changes |
+
+A random split was rejected: it would let the model learn from the same days (and the same mule
+accounts) it is tested on, which overstates performance.
+
+**The ceiling under a budget.** At about 260 frauds a day and 200 reviews a day, no method can catch
+more than roughly 75% of fraud by count. Results are reported against that ceiling.
 
 **Precision-recall metrics and alert budgets.** With fraud around 0.1% of all transactions, ROC-AUC
 looks good even for weak models. The headline numbers are PR-AUC, recall and **fraud value caught**
 within a **daily alert budget** (200 reviews per day), because that is how a fraud operations team
 is measured.
+
+**The existing flag barely works.** On the first run, `isFlaggedFraud` caught 10 of 2,120 frauds
+in the test days. The three rules together caught 96% of fraud, but only by raising about 7,000 alerts
+a day; limited to the top 200 a day, they caught about a third. This is the operational problem the
+model has to solve: not finding fraud at all costs, but finding it within the team's capacity.
 
 **A rules baseline first.** Three readable rules (large amount, account drained, large transfer to
 a new recipient) set the bar. Any model in stage 2 must beat them on the same test days and the same

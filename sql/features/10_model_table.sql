@@ -28,7 +28,8 @@ SELECT
     c.is_fraud,
     CASE WHEN c.step <= s.train_end_step THEN 'train'
          WHEN c.step <= s.valid_end_step THEN 'valid'
-         ELSE 'test' END                                                AS split
+         WHEN c.step <= s.test_end_step  THEN 'test'
+         ELSE 'shifted' END                                             AS split
 FROM transactions_clean AS c
 JOIN account_history AS h USING (txn_id)
 CROSS JOIN split_config AS s

@@ -45,12 +45,14 @@ def load_transactions(con, csv_path: Path) -> int:
     return n
 
 
-def write_split_config(con, train_end_step: int, valid_end_step: int) -> None:
-    """Store the split boundaries in the warehouse so the SQL can use them."""
-    train_end_step, valid_end_step = int(train_end_step), int(valid_end_step)
-    if not 0 < train_end_step < valid_end_step:
-        raise ValueError("split: need 0 < train_end_step < valid_end_step")
+def write_split_config(con, train_end_step: int, valid_end_step: int, test_end_step: int) -> None:
+    """Store the split boundaries in the warehouse so the SQL can use them.
+    Steps after test_end_step form the "shifted" period (a stress test)."""
+    train_end_step, valid_end_step, test_end_step = int(train_end_step), int(valid_end_step), int(test_end_step)
+    if not 0 < train_end_step < valid_end_step < test_end_step:
+        raise ValueError("split: need 0 < train_end_step < valid_end_step < test_end_step")
     con.execute(
         "CREATE OR REPLACE TABLE split_config AS "
-        f"SELECT {train_end_step} AS train_end_step, {valid_end_step} AS valid_end_step"
+        f"SELECT {train_end_step} AS train_end_step, {valid_end_step} AS valid_end_step, "
+        f"{test_end_step} AS test_end_step"
     )

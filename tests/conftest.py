@@ -9,8 +9,10 @@
    6   30  TRANSFER    300    A1      D2        sender A1 seen once before
    7    3  CASH_OUT     20    A6      D3        legit, train
    8   20  TRANSFER     30    A7      D4        legit, valid
-   9   40  CASH_OUT     40    A8      D5        legit, test
-Split: train <= step 10, valid <= step 26, test after.
+   9   40  CASH_OUT     40    A8      D5        legit, shifted
+  10   45  TRANSFER     60    A9      D6        fraud, shifted
+  11   33  CASH_OUT     25    A10     D7        legit, test
+Split: train <= step 10, valid <= step 26, test <= step 35, shifted after.
 """
 from __future__ import annotations
 
@@ -37,6 +39,8 @@ ROWS = [
     (3, "CASH_OUT", 20.0, "A6", 900.0, 880.0, "D3", 10.0, 30.0, 0, 0),
     (20, "TRANSFER", 30.0, "A7", 700.0, 670.0, "D4", 5.0, 35.0, 0, 0),
     (40, "CASH_OUT", 40.0, "A8", 600.0, 560.0, "D5", 0.0, 40.0, 0, 0),
+    (45, "TRANSFER", 60.0, "A9", 60.0, 0.0, "D6", 0.0, 0.0, 1, 0),
+    (33, "CASH_OUT", 25.0, "A10", 400.0, 375.0, "D7", 0.0, 25.0, 0, 0),
 ]
 
 
@@ -47,7 +51,7 @@ def rows_frame(rows=ROWS) -> pd.DataFrame:
 @pytest.fixture
 def cfg() -> dict:
     c = copy.deepcopy(load_config())
-    c["split"] = {"train_end_step": 10, "valid_end_step": 26}
+    c["split"] = {"train_end_step": 10, "valid_end_step": 26, "test_end_step": 35}
     return c
 
 
@@ -56,7 +60,8 @@ def build_warehouse(tmp_path, cfg, frame: pd.DataFrame, name: str = "tiny"):
     frame.to_csv(csv, index=False)
     con = connect(None)
     load_transactions(con, csv)
-    write_split_config(con, cfg["split"]["train_end_step"], cfg["split"]["valid_end_step"])
+    s = cfg["split"]
+    write_split_config(con, s["train_end_step"], s["valid_end_step"], s["test_end_step"])
     build_features(con, SQL_DIR)
     return con
 

@@ -47,11 +47,14 @@ features:
     legacy_flag: output of the existing rule system, kept only as a baseline
     is_fraud: the label
 
-# Time-based split on the simulation clock: 1 step = 1 hour, 743 steps = about 31 days.
-# Train on the past, tune on the next period, test on the most recent one.
+# Time-based split on the simulation clock: 1 step = 1 hour, day d = steps 24(d-1)+1 .. 24d.
+# Normal traffic is realistic (150-200k transactions a day) on days 1-2 and 6-17, then almost
+# stops while fraud continues at about 260 a day (a simulator artefact, see the decision log).
+# Headline results use days 16-17; days 18-31 are a separate "shifted" stress test.
 split:
-  train_end_step: 432   # days 1-18
-  valid_end_step: 552   # days 19-23; test = days 24-31
+  train_end_step: 312   # train  = days 1-13
+  valid_end_step: 360   # valid  = days 14-15
+  test_end_step: 408    # test   = days 16-17; shifted = days 18-31
 
 # Rule-based baseline: what a payments team typically runs before any model.
 rules:
